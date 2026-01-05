@@ -1,0 +1,72 @@
+Project project_name {
+  database_type: 'PostgreSQL'
+  Note: 'Pocketlink.co.uk'
+}
+
+Ref "can own": public.users.id < public.domains.user_id [delete: restrict] // A user can own multiple domains, restrict deletion of user if they owen domains - need a feature to delete domains first
+Ref "owns": public.users.id < public.short_links.user_id [delete: cascade] // A user can own multiple short_links, delete user owned short_links on user deletion
+Ref "has a": public.domains.id < public.short_links.domain_id [delete: restrict] // A domain can have multiple short_links, restrict domain deletion if short_links exist
+Ref "can have a" : public.users.id - public.password_reset_tokens.user_id [delete: cascade] // A user can have one password reset token, delete token on user deletion
+Ref "login via": public.auth_types.id < public.users.auth_type_id [delete: restrict] // An auth_type can be used by multiple users, restrict auth_type deletion if users that use it exist
+
+Table domains {
+  id bigint [pk, unique, not null, increment]
+  user_id bigint [null]
+  name varchar [unique, not null]
+  is_default boolean [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz [null]
+
+  indexes {
+    (user_id, is_default) [unique, note: 'Where is_default = true']
+  }
+
+}
+
+Table users {
+  id bigint [pk, unique, not null, increment]
+  auth_type_id bigint [not null]
+  email varchar [unique, not null]
+  max_allowed_links integer [not null]
+  password_hash varchar [null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz [null]
+  verified_at timestamptz [null]
+}
+
+Table short_links {
+  id bigint [pk, unique, not null, increment]
+  user_id bigint [not null]
+  domain_id bigint [not null]
+  title varchar [null]
+  destination_url varchar [not null]
+  back_half varchar [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz [null]
+
+  indexes {
+    (domain_id, back_half) [unique]
+  }
+
+}
+
+Table password_reset_tokens {
+  id bigint [pk, unique, not null, increment]
+  user_id bigint [not null, unique]
+  token_hash varchar [not null, unique]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  expires_at timestamptz [not null]
+}
+
+Table auth_types {
+  id bigint [pk, unique, not null, increment]
+  name varchar [not null, unique]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz [null]
+}
+
