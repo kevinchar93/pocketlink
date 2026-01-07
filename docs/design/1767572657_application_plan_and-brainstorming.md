@@ -147,7 +147,9 @@ Possible implementation:
 
 - We want to generate a slug that is short.
 - We can use a nano ID with the alphabet below.
-  - `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz` 
+  - `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`
+- The nano id will have length 7 chars
+  - with this 
 - question: I'm not sure if we want to generate a slug that is random because it will be harder to index it.
 - Perhaps what we can do is:
   - generate a nano ID (that is random)
@@ -175,7 +177,10 @@ Possible implementation:
 
 ## How do we handle short link slug collisions, especially if they happen concurrently? 
 
-- Should be handled for us by our database schema. We've put a constraint that the domain & the back half of short link in the short_links table must be unique. 
+- Should be handled for us by our database schema. We've put a constraint that the domain & the back half of short link in the short_links table must be unique - the database will enforce the unique property, even if two slugs are generated at the same time and attempt to write to the DB at the same time.
+- The second slug inserted will create error upon insertion about violating the unique constraint.
+- 
+-  
 ## How will we redirect quests to their destination? 
 ## How do we track the analytics for each click? 
 ## What counts as a visit for analytics purposes? 
