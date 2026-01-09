@@ -1,0 +1,9 @@
+- learn AdonisJS
+- create and deploy non-trivial app from idea, design and creation
+- data design from scratch
+  - sql & no sql
+- "non academic" system design
+- learn AI tools to speed up implementation
+  - not out sourcing thinking to AI just implementation
+- learn more about infrastructure & hosting and true "full stack"
+  - aiming to use k3s

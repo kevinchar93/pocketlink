@@ -119,38 +119,58 @@ The key problems in the application we need to solve are:
 
 - We should ensure that destination URLs are valid. 
 - We will only support URLs with the HTTPS protocol. 
+- We will prevent users providing destination links that are links to other pocket link links to avoid looping.
+- We will Follow any redirects the destination link does up to five hops and validate the last in the chain. 
 - We will pass provided domain names through a content filter to check their suitability. 
   - We will reject destination links to certain content. (adult / dark web / scams)
   - We will use the Google WebRisk API to categorize submitted URLs.
-- We will prevent users providing destination links that are links to other pocket link links to avoid looping. 
 
-Here is the logic:
+Logic:
 ------------------
 -  We check the URL is valid Based on URL specification.
 -  We check it has a maximum length of 2000 characters. 
--  We check that the URL is using the HTTPS protocol. 
+-  We check that the URL is using the HTTPS protocol.
+-  We check that the link isn't on one of the domains we own (a pocket link domain).
+-  We make a HEAD requests to the destination link to see if it redirects. If it does, we do the following:
+   -  Follow the redirect hops up to a maximum of 5 times.
+   -  Check that none of the redirects hop link back to an earlier step in the chain. (Prevent redirect loops)
+   -  Check that none of the redirects violate any of the earlier validation points. (protocol, length, valid URL, not a pocket link domain etc)
+   -  Set a timeout for the redirect hops of 5 seconds
+   -  Take the last item in the chain and validate that against the web risk API.
 -  We make an API call to the Google WebRisk API to check the status of the URL / domain.
    -  We should consider caching the result of this for future use, especially if we can do checks at the domain level. 
--  If any of these validation points fail, we reject URL as invalid.   
+-  If any of these validation points fail, we reject URL as invalid.
+   -  We provide rejection reasons to the user:
+      -  "Sorry our systems determined the destination link is risky, we can't create a short link for it."
+      -  "We only support   HTTPS links."
+      -  "The URL is invalid: <detail here if possible>
+      -  "We only support URLS with a maximum length of 2000 characters."
+      -  "The destination URL contains a redirect loop."
+      -  "The destination URL took too long to validate."
 
 
 Potential issues:
 -----------------
-- What should we do if the web risk API is down? 
-- Is there any kind of rate limiting from the web risk API we have to be concerned with? 
-
-Possible implementation:
-----------------------
+- What should we do if the web risk API is down?
+  - for now What we will do is just display an appropriate message saying the short link cannot be created due to our Risk scanning service being down.
+  - I think a solution for this in the long term is to create the link, but give the user a warning that we were unable to check it. The link will not be accessible until it can be validated. 
+    - We could create a background job that will automatically Attempt to validate the link later. 
+    - or we can put a notification on the user's dashboard that they have unvalidated links due to an outage and that they need to manually click a CTA to attempt revalidation later down the line. 
+- Is there any kind of rate limiting from the web risk API we have to be concerned with?
+  - For now, users will have a hard limit of 20 links that they can create. So I don't think that number is high enough to warrant any explicit rate limiting within the application. 
+  - We can look to configure rate limiting in any load balancer service that we use with the cloud provider that the application is deployed to. 
 
 
 ## How will we actually generate the short link slugs?
 
+Thinking
+----------
 - We want to generate a slug that is short.
 - We can use a nano ID with the alphabet below.
   - `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`
 - The nano id will have length 7 chars
   - with this 
-- question: I'm not sure if we want to generate a slug that is random because it will be harder to index it.
+- **Question** I'm not sure if we want to generate a slug that is random because it will be harder to index it.
 - Perhaps what we can do is:
   - generate a nano ID (that is random)
   - write it to our DB table
@@ -159,15 +179,24 @@ Possible implementation:
 - This way I should be able to insert without having to generate an index with the random ID (slower writes).
 - When we come to look up the short link, we will look for it initially in the cache where it should be populated. 
 - If it can't be found in the cache, we'll look it up from the table and insert it into the cache for next time. 
-
-
-Potential issues:
------------------
-- What happens if we fail a put the mapping in the cache
+- **Question** What happens if we fail a put the mapping in the cache
   - This should be fine as long as it's written to the database. As when we look it up, if it's not in the cache, we'll look for it in the DB, then populate the cache with the mapping. 
-- 
+**Question** How do we handle short link slug collisions, especially if they happen concurrently? 
+  - Should be handled for us by our database schema. We've put a constraint that the domain & the back half of short link in the short_links table must be unique - the database will enforce the unique property, even if two slugs are generated at the same time and attempt to write to the DB at the same time.
+  - The second slug inserted will create error upon insertion about violating the unique constraint.
+  - When this error happens, we should be okay to simply regenerate a new ID without a collision - we can try this up to 10 times, And if we still have collisions, we increment the length of the nano ID by one and try again. 
 
-Possible implementation:
+Logic:
+-----------------
+- generate a nano id with default length of 7 using alphabet `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`
+- Check if the nano ID exists in the database. (collision check)
+  - If collision occurs, generate new ID & check again
+  - ID generation up to 5 times if we still have a collision, increment the length of the nano ID by one & repeat
+  - Fail after a maximum of 15 attempts.
+- Use the result as the short link slug.
+- The slug should be inserted in the cache and then into the database as a transaction when being used. 
+
+Possible implementation details:
 ------------------------
 - Redis supports a bulk loading, taking a text file, containing entries in the Redis protocol.
 - We can create an admin script that will generate a text file to populate the cache from the tables containing the short link mappings.
@@ -175,26 +204,57 @@ Possible implementation:
 - We can also use it to create a script to pre-populate the cache if we need to turn it off for upgrades, etc. 
 - https://redis.io/docs/latest/develop/clients/patterns/bulk-loading/
 
-## How do we handle short link slug collisions, especially if they happen concurrently? 
-
-- Should be handled for us by our database schema. We've put a constraint that the domain & the back half of short link in the short_links table must be unique - the database will enforce the unique property, even if two slugs are generated at the same time and attempt to write to the DB at the same time.
-- The second slug inserted will create error upon insertion about violating the unique constraint.
-- 
--  
 ## How will we redirect quests to their destination? 
-## How do we track the analytics for each click? 
-## What counts as a visit for analytics purposes? 
+
+Thinking
+---------
+
+Logic
+------
+
+
+## How do we track the analytics for each click?
+
+
+## What counts as a visit for analytics purposes?
+
+
 ## What exactly do we track in the analytics? 
+
+
 ## What happens to analytics data when a link is deleted? 
+
+
 ## How far back does analytics data go? (store forever, or rolling window?)
-## Do we allow users to provide a customized short link alias? 
+
+## Do we allow users to provide a customized short link alias?
+
 ## Do we need any caching and how will we implement this? 
+
 ## Do we need or want any rate limiting? 
+
 ## How are we going to handle authentication? 
+
 ## What happened when a user edits the destination URL of a link? 
+
 ## What happens when a user deletes a link? 
+
 ## What happens when a user deletes their account?
+
+We will delete all of the links associated with their account. 
+
+We will do this as a batch job instead of doing it upon the user deleting their account (using soft delete).
+
+ 
+
 ## What happens when someone tries to visit a deleted/expired short link?
+
+
+
 ## How do we handle URLs that are already short links from your own service? (prevent loops?)
+
+We will handle this in the validation step that is run when a user creates new links. We will prevent them from providing destination links that link to a pocket link URL. 
+
 ## Do you need any concept of "public" vs "private" links?
 
+No, we will not be offering any facility for creating private links. All short links created on the website will be publicly accessible. 
