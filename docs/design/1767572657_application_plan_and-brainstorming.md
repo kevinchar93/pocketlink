@@ -126,7 +126,6 @@ The key problems in the application we need to solve are:
   - We will use the Google WebRisk API to categorize submitted URLs.
 
 Logic:
-------------------
 -  We check the URL is valid Based on URL specification.
 -  We check it has a maximum length of 2000 characters. 
 -  We check that the URL is using the HTTPS protocol.
@@ -150,7 +149,6 @@ Logic:
 
 
 Potential issues:
------------------
 - What should we do if the web risk API is down?
   - for now What we will do is just display an appropriate message saying the short link cannot be created due to our Risk scanning service being down.
   - I think a solution for this in the long term is to create the link, but give the user a warning that we were unable to check it. The link will not be accessible until it can be validated. 
@@ -164,7 +162,6 @@ Potential issues:
 ## How will we actually generate the short link slugs?
 
 Thinking
-----------
 - We want to generate a slug that is short.
 - We can use a nano ID with the alphabet below.
   - `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`
@@ -187,7 +184,6 @@ Thinking
   - When this error happens, we should be okay to simply regenerate a new ID without a collision - we can try this up to 10 times, And if we still have collisions, we increment the length of the nano ID by one and try again. 
 
 Logic:
------------------
 - generate a nano id with default length of 7 using alphabet `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`
 - Check if the nano ID exists in the database. (collision check)
   - If collision occurs, generate new ID & check again
@@ -197,7 +193,6 @@ Logic:
 - The slug should be inserted in the cache and then into the database as a transaction when being used. 
 
 Possible implementation details:
-------------------------
 - Redis supports a bulk loading, taking a text file, containing entries in the Redis protocol.
 - We can create an admin script that will generate a text file to populate the cache from the tables containing the short link mappings.
 - We can create a script that uses this nightly to make sure that the cache is properly populated. 
@@ -206,20 +201,43 @@ Possible implementation details:
 
 ## How will we redirect quests to their destination? 
 
-Thinking
----------
-
-Logic
-------
+- Pocket link will be hosted on the domain `pocketlink.co.uk`
+- Short links will have the domain `pok.ad` , example like `pok.ad/sfhSHc9`
+- Requests from both domains will be routed to the web application.
+- We inspect the domain and route the request to the right controller. 
+- The application will look in its cache, find the destination link, 
+  -  if found return a response. 
+-  If it's not in the cache, the application will do a database lookup. 
+  -  if found return a response. 
+-  If it can't be found in the cache or in a database, a 404 response will be returned. 
+-  When the response returned to the user, the cache control header will be set to only cache in the browser for 5 minutes.
+   -  TTL is 5 min so we strike a good balance between performance and today analytics. 
 
 
 ## How do we track the analytics for each click?
 
+- We will use a NoSQL database to track link analytics (mongoDB)
+- If we've successfully looked up and returned a response for a short link we will write a document to the collection `link_visit`
+- We will query this collection to create our analytics visualizations.  
 
 ## What counts as a visit for analytics purposes?
 
+- not planning on putting any client side injected code into the redirect
+- a visit will be counted when a request hits the application server
 
 ## What exactly do we track in the analytics? 
+
+- the link
+- link owner
+- time of the event
+- ip address (hashed)
+- user agent
+- referrer
+
+see doc: 1767571394_document_db_model_for_storing_events.md
+
+##
+
 
 
 ## What happens to analytics data when a link is deleted? 
@@ -229,23 +247,27 @@ Logic
 
 ## Do we allow users to provide a customized short link alias?
 
+No, we don't want to introduce this complexity, That said, the current design would allow for it in the future.
+
 ## Do we need any caching and how will we implement this? 
 
 ## Do we need or want any rate limiting? 
 
 ## How are we going to handle authentication? 
 
-## What happened when a user edits the destination URL of a link? 
+## What happened when a user edits the destination URL of a link?
 
-## What happens when a user deletes a link? 
+## What happens when a user deletes a link?
+
+The short link will be soft deleted by setting a time on the deleted_at field.
+
+We will create an hourly cron job that will hard delete the short links and archive the back_half by inserting it into the archived_short_links table, we'll be able to use this table to look up existing slugs when generating slugs for new short links.
 
 ## What happens when a user deletes their account?
 
 We will delete all of the links associated with their account. 
 
 We will do this as a batch job instead of doing it upon the user deleting their account (using soft delete).
-
- 
 
 ## What happens when someone tries to visit a deleted/expired short link?
 

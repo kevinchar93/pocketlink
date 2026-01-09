@@ -4,8 +4,8 @@ Collection: audit_event
 
 ```json
 {
-  "_id": "xxxxx",
-  "timestamp": "ISODate('2025-11-15T21:46:53Z')",
+  "_id": "When the actual P address or analytics is being displayed. ",
+  "timestamp": "2025-11-15T21:46:53Z",
   "event": "LINK_CREATED",
   "user": {
     "id": 123, // ID of event *owner* from SQL "user" table
@@ -28,8 +28,8 @@ Collection: link_visit
 
 ```json
 {
-  "_id": "ObjectId('...another_unique_id...')",
-  "timestamp": "ISODate('2025-11-15T21:50:00Z')",
+  "_id": "f83ad712c12c4925b2d32aa524ea536c",
+  "timestamp": "2025-11-15T21:50:00Z",
   "link_id": 456, // ID from SQL "shortlink" table
   "user_id": 123, // ID of *owner* from SQL "user" table
   "ip_hash": "a_hashed_ip_address_for_privacy",
