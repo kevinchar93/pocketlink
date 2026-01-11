@@ -35,6 +35,12 @@
       "y": 528
     },
     {
+      "name": "email_change_tokens",
+      "schemaName": "public",
+      "x": 16,
+      "y": 1094.945623141204
+    },
+    {
       "name": "user_verification_tokens",
       "schemaName": "public",
       "x": 1008,
@@ -138,6 +144,21 @@
       "secondTableName": "user_verification_tokens",
       "secondSchemaName": "public",
       "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "id"
+      ],
+      "firstTableName": "users",
+      "firstSchemaName": "public",
+      "firstRelation": "1",
+      "secondFieldNames": [
+        "user_id"
+      ],
+      "secondTableName": "email_change_tokens",
+      "secondSchemaName": "public",
+      "secondRelation": "*",
       "checkPoints": []
     }
   ]
