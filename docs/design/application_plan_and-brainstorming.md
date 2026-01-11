@@ -41,7 +41,7 @@ When accessing a link created by a user a single action can be done:
 
 - User starts on landing page and will enter their long link in the form and click get your link CTA. 
 - User is navigated to the Create Your Account page with URL encoded long link. 
-- User fills in create your account form with email and password or will log in using social authentication.
+- User fills in create your account form with email and password
 - Account is created for user and they are navigated to the dashboard
 - A modal for successful link creation is shown to the user on top of the dashboard. 
 - User can just click create account and not create a link upon sign up if they wish. 
@@ -110,7 +110,9 @@ When accessing a link created by a user a single action can be done:
 - The user must be on the settings page. In the profile page, they can choose to change their email from the CTA. 
 - The user must first confirm their password. This is a protected area. 
 - The user is shown the change email address form where they can provide and confirm their new email address and submit the form. 
-- A verification email is sent to the user. Clicking this, their new email address will be confirmed and their all email address removed. 
+- A authorisation email is sent to the user's old email address, they can either accept or cancel the change from this email. Accepting the authorization link will trigger the next step, which will send a verification email to their new email address. 
+- The user can either accept or cancel the change in the verification email to their new email address. Accepting opens the link in the browser, which logs them out and changes their email to the new email address. 
+- They are redirected to the email changed page.  
 
 ### Change password
 
@@ -158,7 +160,7 @@ The key problems in the application we need to solve are:
 - We will Follow any redirects the destination link does up to five hops and validate the last in the chain. 
 - We will pass provided domain names through a content filter to check their suitability. 
   - We will reject destination links to certain content. (adult / dark web / scams)
-  - We will use the Google WebRisk API to categorize submitted URLs.
+  - We will use the Google SafeBrowsing API to categorize submitted URLs.
 
 Logic:
 -  We check the URL is valid Based on URL specification.
@@ -171,7 +173,7 @@ Logic:
    -  Check that none of the redirects violate any of the earlier validation points. (protocol, length, valid URL, not a pocket link domain etc)
    -  Set a timeout for the redirect hops of 5 seconds
    -  Take the last item in the chain and validate that against the web risk API.
--  We make an API call to the Google WebRisk API to check the status of the URL / domain.
+-  We make an API call to the Google SafeBrowsing API to check the status of the URL / domain.
    -  We should consider caching the result of this for future use, especially if we can do checks at the domain level. 
 -  If any of these validation points fail, we reject URL as invalid.
    -  We provide rejection reasons to the user:
@@ -183,6 +185,8 @@ Logic:
       -  "The destination URL took too long to validate."
 
 
+We should consider caching the results from the Google Safe Browsing API so that we don't use up too much of our limits. 
+
 Potential issues:
 - What should we do if the web risk API is down?
   - for now What we will do is just display an appropriate message saying the short link cannot be created due to our Risk scanning service being down.
@@ -190,8 +194,7 @@ Potential issues:
     - We could create a background job that will automatically Attempt to validate the link later. 
     - or we can put a notification on the user's dashboard that they have unvalidated links due to an outage and that they need to manually click a CTA to attempt revalidation later down the line. 
 - Is there any kind of rate limiting from the web risk API we have to be concerned with?
-  - For now, users will have a hard limit of 20 links that they can create. So I don't think that number is high enough to warrant any explicit rate limiting within the application. 
-  - We can look to configure rate limiting in any load balancer service that we use with the cloud provider that the application is deployed to. 
+  - We will use the rate limiting package provided by the framework to limit users by their ip addresses and the number of requests they make over a given time frame - We will configure a global rate limiter, but then also configure more specific rate limiting, depending on endpoint. 
 
 
 ### How will we actually generate the short link slugs?
@@ -220,18 +223,14 @@ Thinking
 
 Logic:
 - generate a nano id with default length of 7 using alphabet `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`
-- Check if the nano ID exists in the database. (collision check)
+- Generate a nano id & attempt to insert it into the DB
   - If collision occurs, generate new ID & check again
   - ID generation up to 5 times if we still have a collision, increment the length of the nano ID by one & repeat
   - Fail after a maximum of 15 attempts.
 - Use the result as the short link slug.
-- The slug should be inserted in the cache and then into the database as a transaction when being used. 
+- The slug should be inserted into the cache once in the DB table
 
 Possible implementation details:
-- Redis supports a bulk loading, taking a text file, containing entries in the Redis protocol.
-- We can create an admin script that will generate a text file to populate the cache from the tables containing the short link mappings.
-- We can create a script that uses this nightly to make sure that the cache is properly populated. 
-- We can also use it to create a script to pre-populate the cache if we need to turn it off for upgrades, etc. 
 - https://redis.io/docs/latest/develop/clients/patterns/bulk-loading/
 - https://packages.adonisjs.com/packages/adonisjs-cache
 
@@ -253,9 +252,12 @@ Possible implementation details:
 ### How do we track the analytics for each click?
 
 - We will use a NoSQL database to track link analytics (mongoDB)
-- If we've successfully looked up and returned a response for a short link we will write a document to the collection `link_visit`
+- If we've successfully looked up and returned a response for a short link we will create an async job to write a document to the collection `link_visit`
   - to be able to look up the location from the ip using a web service we will write the data to a queue to be written to the collection - this is so we don't delay the response waiting for an ip address lookup
-  - we will use the service max mind geo ip api to look up location data from ip addresses (https://www.maxmind.com/en/geoip-api-web-services#buy-now)
+  - we will use the free downloadable geo ip database provided by max mind to look up location data from ip addresses
+    - https://dev.maxmind.com/geoip/geolite2-free-geolocation-data/
+    - (https://www.maxmind.com/en/geoip-api-web-services#buy-now)
+  - upon writing the data to the collection the ip address is hashed with a time based salt (changes every 12 hours)
 - we will query this collection to create our analytics visualizations.
 - https://packages.adonisjs.com/packages/adonisjs-jobs
 
@@ -269,7 +271,7 @@ Possible implementation details:
 - the link
 - link owner
 - time of the event
-- ip address (hashed)
+- ip address (hashed with time based salt)
 - user agent
 - referrer
 
@@ -294,7 +296,15 @@ No, we don't want to introduce this complexity, That said, the current design wo
 
 ### Do we need or want any rate limiting? 
 
-Users are going to be limited to creating 20 links in total. So I don't think we need to rate limit the rate at which they can create links, but we should have the analytics to observe what's being called and when to see if we do need to rate limit any part of the application. 
+Users are going to be limited to creating 20 links in total. 
+
+- We will use the rate limiting package provided by the framework to limit users by their ip addresses and the number of requests they make over a given time frame - We will configure a global rate limiter, but then also configure more specific rate limiting, depending on endpoint. 
+
+Suggested rate limits for specific endpoints:
+
+- /create-link: 10 requests per minute per IP (prevents validation spam)
+- /{slug} (redirects): 100 requests per minute per IP (generous for legitimate use)
+- /login: 5 attempts per 15 minutes per IP (brute force protection)
 
 ### How are we going to handle authentication?
 
@@ -318,11 +328,13 @@ We will create an hourly cron job that will hard delete the short links and arch
 
 We will delete all of the links associated with their account. 
 
-We will do this as a batch job instead of doing it upon the user deleting their account (using soft delete).
+Their user id will be removed from all analytics.
+
+We will do this as a batch job every hour instead of doing it upon the user deleting their account (using soft delete).
 
 ### What happens when someone tries to visit a deleted/expired short link?
 
-The cache will be checked to see if the mapping does not exist because it 
+The web application will return a 404 error page.
 
 Note: we will also will use the archived short links table to maintain a list of the links that have been removed. 
 
@@ -337,7 +349,7 @@ No, we will not be offering any facility for creating private links. All short l
 ### How do we perform the password reset
 
 - when the user wants to reset their password by submitting their email in the forgot password form, we generate a reset primary token for the `password_reset_tokens` table
-- token is 64 bytes long & crypto graphically random
+- token is 64 bytes long & cryptographically random
 - we store the hash of the primary token in the table
 - the user is sent the actual token in their reset email
 - user clicks link that is a URL with the token
@@ -345,7 +357,7 @@ No, we will not be offering any facility for creating private links. All short l
 - server hashes primary token & looks up the record for hash
   - performs "token from email validation check"
 - server sets `primary_token_used_at`
-- server generates secondary token - 64 bytes long & crypto graphically random
+- server generates secondary token - 64 bytes long & cryptographically random
 - server stores hash of the secondary token in the table with the record
 - server embeds secondary token in rendered reset form page
 - client submits form back to same URL with primary token (in URL) & secondary token as a hidden field
@@ -380,6 +392,43 @@ Rate limiting:
 Still not sure on this. We can check any tokens were created for a particular user over time or over a period of time, except if we only use this, this would open us up to enumeration. We don't want to expose which emails are registered with us if possible. 
 
 
+### How do we perform email change
+
+TODO: flesh this out
+
+- the user triggers the email change by first completing a password challenge
+- Then fill in the change email address form and submit it. 
+- The server creates an authorization token for the `email_change_tokens` table
+- token is 64 bytes long & cryptographically random
+- we store the hash of the auth token in the table in `authorisation_token_hash`
+- new email is stored in `new_email`
+- the user is sent the actual token in their auth email
+- From the email, the user can choose to accept or cancel the change. 
+  - cancelling the change deletes the record from the table by opening url with the token
+  - "cancel change validation check" is done before accepting cancellation
+- If the user chooses to accept, they click a link that opens the URL with the token.
+- this fetches the "Verification Email Sent"  page from the server
+- server will perform "accept authorisation validation check"
+- if request valid continue
+- `authorisation_token_used_at` is set
+- a job to send a verification email is scheduled
+- user will receive verification email at new address - user can accept of cancel change
+  - cancelling the change deletes the record from the table by opening url with the token
+  - "cancel change validation check" is done before accepting cancellation
+- If the user chooses to accept, they click a link that opens the URL with the token, user clicks link that is a URL with the token
+- this fetches "Email changed" page from the server
+- server will perform "accept verification validation check"
+- if request valid continue
+- `verification_token_used_at` is set
+- we replace the users email in the users table with `new_email`
+
+
+cancel change validation check:
+
+accept authorisation validation check:
+
+accept verification check:
+
 ## URL Plan
 
 URLs expected for each flow
@@ -387,17 +436,16 @@ URLs expected for each flow
 ### Landing page, create link and sign up
 - Landing Page
   - `GET /` - show page
-  - `POST /landing-form` - submit form
 
 - SignUp Page
-  - `GET /sign-up` - show page
+  - `GET /sign-up?url={encoded_url}` - show page
   - `POST /sign-up` - submit form
 
 - Dashboard Page
   - `GET /dashboard` - show page
 
-- Email verification Action
-  - `POST /verify/{token}` - validate account with link from email
+- Email Verification Page
+  - `GET /verify-email/{token}` - validate account with link from email
   
 ### Sign in
 
@@ -407,6 +455,15 @@ URLs expected for each flow
 
 - Dashboard Page
   - `GET /dashboard` - show page
+
+### Sign Out
+
+- Any Page
+  - hit sign out button
+  - "Are you sure?" modal
+
+- Sign Out Action
+  - `POST /sign-out` - remove session & redirect to landing page
 
 ### Forgot Password
 - SignIn Page
@@ -421,8 +478,8 @@ URLs expected for each flow
   - `GET /forgot-password-email` - show page
 
 - New Password Page
-  - `GET /new-password?tok={token}` - show page
-  - `POST /new-password` - submit form
+  - `GET /reset-password/{token}` - show page
+  - `POST /reset-password/{token}` - submit form
 
 - Password Reset Confirmed Page
   - `GET /password-changed` - show page
@@ -451,7 +508,7 @@ URLs expected for each flow
 
 - Create Link Page
   - `GET /links/new` show page
-  - `POST /links` - submit form
+  - `POST /links/new` - submit form
 
 - Link Detail Page
   - `GET /links/{domain}/{slug}` - show page
@@ -471,7 +528,7 @@ URLs expected for each flow
   - `GET /links` - show page
 
 - Edit Link Page
-  - `GET /links/edit` show page
+  - `GET /links/{domain}/{slug}/edit` show page
   - `PATCH /links/{domain}/{slug}` - submit form
 
 - Link Detail Page
@@ -486,7 +543,7 @@ OR
   - `GET /links/{domain}/{slug}` - show page
 
 - Delete Link Page
-  - `GET /links/delete/{domain}/{slug}` show page
+  - `GET /links/{domain}/{slug}/delete` show page
   - `DELETE /links/{domain}/{slug}` - submit deletion
 
 - My Links Page
@@ -505,7 +562,7 @@ OR
   - `GET /dashboard` - show page
 
 - Settings Usage And Activity Page
-  - `GET /settings/usage-and-activity/export` - generate & download export data
+  - `GET /settings/usage-and-activity/export?format=json` - generate & download export data
 
 ### Change email address
 - Settings Profile Page
@@ -519,8 +576,12 @@ OR
   - `GET /change-email` - show page
   - `POST /change-email` - submit form
   
-- Verify Email Changed Page
-  - `GET /change-email-verify` - show page
+- Must Verify Email Page
+  - `GET /change-email-must-verify` - show page
+
+- Email Changed Page
+  - `GET /verify-email/{token}` - show page
+  - `GET /cancel-email-change/{token}` - show page (alternative for old email address to cancel change)
 
 ### Change password
 
@@ -555,3 +616,76 @@ OR
   - `GET /account-deleted` - show page
 
 ### List of pages & URLs with their methods
+
+#### Pages
+
+1. Landing Page
+2. Sign Up Page
+3. Sign In Page
+4. Email Verification Page
+5. Dashboard Page
+6. Forgot Password Page
+7. Check Email Reset Link Page
+8. New Password Page
+9. Password Reset Confirmed Page
+10. My Links Page
+11. Create Link Page
+12. Link Detail Page
+13. Edit Link Page
+14. Delete Link Page
+15. Settings Profile Page
+16. Settings Usage And Activity Page
+17. Confirm Password Page
+18. Change Password Form Page
+19. Delete Account Form Page
+20. Delete Account Confirmation Page
+
+---
+
+#### URLs and Methods
+
+##### Authentication & Account
+- [x] `GET /` - Landing page
+- [x] `GET /sign-up` - Show sign up form
+- [x] `POST /sign-up` - Submit sign up form
+- [x] `GET /sign-in` - Show sign in form
+- [x] `POST /sign-in` - Submit sign in form
+- [x] `POST /sign-out` - Sign out user
+- [x] `GET /verify-email/{token}` - Verify email from link
+
+##### Password Reset
+- [x] `GET /forgot-password` - Show forgot password form
+- [x] `POST /forgot-password` - Submit forgot password form
+- [x] `GET /forgot-password-email` - Show "check your email" page
+- [x] `GET /reset-password/{token}` - Show reset password form
+- [x] `POST /reset-password/{token}` - Submit new password
+- [x] `GET /password-changed` - Show password changed confirmation
+
+##### Links Management
+- [x] `GET /dashboard` - Show dashboard
+- [x] `GET /links` - Show all user's links
+- [x] `GET /links/new` - Show create link form
+- [x] `POST /links/new` - Submit create new link form
+- [x] `GET /links/{domain}/{slug}` - Show link details
+- [x] `GET /links/{domain}/{slug}/edit` - Show edit link form
+- [x] `PATCH /links/{domain}/{slug}` - Update link
+- [x] `GET /links/{domain}/{slug}/delete` - Show delete confirmation
+- [x] `DELETE /links/{domain}/{slug}` - Delete link
+
+##### Settings & Account Management
+- [x] `GET /settings/profile` - Show profile settings
+- [x] `GET /settings/usage-and-activity` - Show usage and activity
+- [x] `GET /settings/usage-and-activity/export?format=json` - Export activity data
+
+#### Password Confirmation (reusable)
+- [x] `GET /confirm-password` - Show password confirmation form
+- [x] `POST /confirm-password` - Submit verify password form
+
+##### Change Password
+- [x] `GET /change-password` - Show change password form
+- [x] `POST /change-password` - Submit new password
+
+##### Delete Account
+- [x] `GET /delete-account` - Show delete account confirmation form
+- [x] `POST /delete-account` - Submit delete account form
+- [x] `GET /account-deleted` - Show account deleted confirmation
