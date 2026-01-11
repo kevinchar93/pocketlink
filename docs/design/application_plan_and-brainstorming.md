@@ -396,7 +396,7 @@ URLs expected for each flow
 - Dashboard Page
   - `GET /dashboard` - show page
 
-- Email verification step
+- Email verification Action
   - `POST /verify/{token}` - validate account with link from email
   
 ### Sign in
@@ -421,22 +421,137 @@ URLs expected for each flow
   - `GET /forgot-password-email` - show page
 
 - New Password Page
-  - `GET /new-password?t={token}` - show page
+  - `GET /new-password?tok={token}` - show page
   - `POST /new-password` - submit form
 
 - Password Reset Confirmed Page
   - `GET /password-changed` - show page
 
 ### Create quick link
-### Create new link
+
+- Dashboard Page
+  - `GET /dashboard` - show page
+  - `POST /links` - submit form
+
+- Link Detail Page
+  - `GET /links/{domain}/{slug}` - show page
+
 ### View all links
+
+- Dashboard Page
+  - `GET /dashboard` - show page
+
+- My Links Page
+  - `GET /links` - show page
+
+### Create new link
+
+- My Links Page
+  - `GET /links` - show page
+
+- Create Link Page
+  - `GET /links/new` show page
+  - `POST /links` - submit form
+
+- Link Detail Page
+  - `GET /links/{domain}/{slug}` - show page
+
+
 ### View link details
+
+- My Links Page
+  - `GET /links` - show page
+
+- Link Detail Page
+  - `GET /links/{domain}/{slug}` - show page
+
 ### Edit a link
+
+- My Links Page
+  - `GET /links` - show page
+
+- Edit Link Page
+  - `GET /links/edit` show page
+  - `PATCH /links/{domain}/{slug}` - submit form
+
+- Link Detail Page
+  - `GET /links/{domain}/{slug}` - show page
+
 ### Delete a link
+
+- My Links Page
+  - `GET /links` - show page
+OR
+- Link Detail Page
+  - `GET /links/{domain}/{slug}` - show page
+
+- Delete Link Page
+  - `GET /links/delete/{domain}/{slug}` show page
+  - `DELETE /links/{domain}/{slug}` - submit deletion
+
+- My Links Page
+  - `GET /links` - show page
+
 ### View account activity data
+
+- Dashboard Page
+  - `GET /dashboard` - show page
+
+- Settings Usage And Activity Page
+  - `GET /settings/usage-and-activity` - show page
+
 ### Export account activity data
+- Dashboard Page
+  - `GET /dashboard` - show page
+
+- Settings Usage And Activity Page
+  - `GET /settings/usage-and-activity/export` - generate & download export data
+
 ### Change email address
+- Settings Profile Page
+  - `GET /settings/profile` - show page
+
+- Confirm Password Page
+  - `GET /confirm-password` - show page
+  - `POST /confirm-password` - submit form
+
+- Change Email Address Form Page
+  - `GET /change-email` - show page
+  - `POST /change-email` - submit form
+  
+- Verify Email Changed Page
+  - `GET /change-email-verify` - show page
+
 ### Change password
+
+- Settings Profile Page
+  - `GET /settings/profile` - show page
+
+- Confirm Password Page
+  - `GET /confirm-password` - show page
+  - `POST /confirm-password` - submit form
+
+- Change Password Form Page
+  - `GET /change-password` - show page
+  - `POST /change-password` - submit form
+
+- Dashboard Page
+  - `GET /dashboard` - show page
+
 ### Delete account
+
+- Settings Profile Page
+  - `GET /settings/profile` - show page
+
+- Confirm Password Page
+  - `GET /confirm-password` - show page
+  - `POST /confirm-password` - submit form
+
+- Delete Account Form Page
+  - `GET /delete-account` - show page
+  - `POST /delete-account` - submit form
+
+- Delete Account Confirmation Page
+  - `GET /account-deleted` - show page
 
 ### List of pages & URLs with their methods
