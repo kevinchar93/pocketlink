@@ -6,7 +6,7 @@ Project project_name {
 Ref "can own": public.users.id < public.domains.user_id [delete: restrict] // A user can own multiple domains, restrict deletion of user if they owen domains - need a feature to delete domains first
 Ref "owns": public.users.id < public.short_links.user_id [delete: cascade] // A user can own multiple short_links, delete user owned short_links on user deletion
 Ref "has a": public.domains.id < public.short_links.domain_id [delete: restrict] // A domain can have multiple short_links, restrict domain deletion if short_links exist
-Ref "can have a" : public.users.id - public.password_reset_tokens.user_id [delete: cascade] // A user can have one password reset token, delete token on user deletion
+Ref "can have a" : public.users.id < public.password_reset_tokens.user_id [delete: cascade] // A user can have multiple password reset token, delete token on user deletion
 Ref "login via": public.auth_types.id < public.users.auth_type_id [delete: restrict] // An auth_type can be used by multiple users, restrict auth_type deletion if users that use it exist
 Ref "can have a" : public.users.id - public.user_verification_tokens.id [delete: cascade] // A user can have one verification token, delete token on user deletion
 
@@ -64,7 +64,10 @@ Table archived_short_links {
 Table password_reset_tokens {
   id bigint [pk, unique, not null, increment]
   user_id bigint [not null, unique]
-  token_hash varchar [not null, unique]
+  primary_token_hash varchar [not null, unique]
+  secondary_token_hash varchar [null]
+  primary_token_used_at timestamptz [null]
+  secondary_token_used_at timestamptz [null]
   created_at timestamptz [not null]
   expires_at timestamptz [not null]
 }

@@ -38,7 +38,7 @@
       "name": "user_verification_tokens",
       "schemaName": "public",
       "x": 1008,
-      "y": 800
+      "y": 852.9456231412039
     },
     {
       "name": "auth_types",
@@ -107,7 +107,7 @@
       ],
       "secondTableName": "password_reset_tokens",
       "secondSchemaName": "public",
-      "secondRelation": "1",
+      "secondRelation": "*",
       "checkPoints": []
     },
     {
