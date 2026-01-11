@@ -58,7 +58,7 @@ When accessing a link created by a user a single action can be done:
 - User will need to click reset link in email to be navigated to set a new password page. 
 - Upon successfully creating a new password, user is shown password changed success page with a CTA to take them to the login page. 
 
-### Create  quick link
+### Create quick link
 
 - User starts on dashboard. Paste their long link into the create a new pocket link form and click create your pocket link CTA. 
 - User is shown, link created successfully, modal upon successful link creation. 
@@ -198,6 +198,7 @@ Possible implementation details:
 - We can create a script that uses this nightly to make sure that the cache is properly populated. 
 - We can also use it to create a script to pre-populate the cache if we need to turn it off for upgrades, etc. 
 - https://redis.io/docs/latest/develop/clients/patterns/bulk-loading/
+- https://packages.adonisjs.com/packages/adonisjs-cache
 
 ## How will we redirect quests to their destination? 
 
@@ -218,7 +219,10 @@ Possible implementation details:
 
 - We will use a NoSQL database to track link analytics (mongoDB)
 - If we've successfully looked up and returned a response for a short link we will write a document to the collection `link_visit`
-- We will query this collection to create our analytics visualizations.  
+  - to be able to look up the location from the ip using a web service we will write the data to a queue to be written to the collection - this is so we don't delay the response waiting for an ip address lookup
+  - we will use the service max mind geo ip api to look up location data from ip addresses (https://www.maxmind.com/en/geoip-api-web-services#buy-now)
+- we will query this collection to create our analytics visualizations.
+- https://packages.adonisjs.com/packages/adonisjs-jobs
 
 ## What counts as a visit for analytics purposes?
 
@@ -236,26 +240,38 @@ Possible implementation details:
 
 see doc: 1767571394_document_db_model_for_storing_events.md
 
-##
-
-
-
 ## What happens to analytics data when a link is deleted? 
 
+Create a background job to remove the user ID from each analytics entry in the collection. But we still want to keep analytics for links, even if the owner has deleted them for our analytics purposes. 
 
 ## How far back does analytics data go? (store forever, or rolling window?)
+
+Three months of analytics will be kept a background job will run every night that removes analytics older than a given date
 
 ## Do we allow users to provide a customized short link alias?
 
 No, we don't want to introduce this complexity, That said, the current design would allow for it in the future.
 
-## Do we need any caching and how will we implement this? 
+## Do we need any caching and how will we implement this?
+
+-  We will maintain a cache of the URL mappings that we will use when looking up that we need to redirect. 
+-  When sending redirect responses to the client, we will provide a cache control header for the browser to cache the response for five minutes. 
 
 ## Do we need or want any rate limiting? 
 
-## How are we going to handle authentication? 
+Users are going to be limited to creating 20 links in total. So I don't think we need to rate limit the rate at which they can create links, but we should have the analytics to observe what's being called and when to see if we do need to rate limit any part of the application. 
+
+## How are we going to handle authentication?
+
+- There is no concept of private short links. All short links are publicly accessible. 
+-  Users must be logged in to manage short links on the website.
+-  We will authenticate users using server side sessions. 
 
 ## What happened when a user edits the destination URL of a link?
+
+ When writing the new mapping to the database, we replace the existing mapping in the cache.
+
+ We update the record associated short_links table 
 
 ## What happens when a user deletes a link?
 
@@ -271,7 +287,9 @@ We will do this as a batch job instead of doing it upon the user deleting their 
 
 ## What happens when someone tries to visit a deleted/expired short link?
 
+The cache will be checked to see if the mapping does not exist because it 
 
+Note: we will also will use the archived short links table to maintain a list of the links that have been removed. 
 
 ## How do we handle URLs that are already short links from your own service? (prevent loops?)
 
