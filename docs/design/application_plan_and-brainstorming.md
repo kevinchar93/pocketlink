@@ -148,6 +148,7 @@ The key problems in the application we need to solve are:
 - What happens when someone tries to visit a deleted/expired short link?
 - How do we handle URLs that are already short links from your own service? (prevent loops?)
 - Do you need any concept of "public" vs "private" links?
+- How do we perform the password reset
 
 ### What validation do we want to perform on destination URLs that are given to us?
 
@@ -333,6 +334,52 @@ We will handle this in the validation step that is run when a user creates new l
 
 No, we will not be offering any facility for creating private links. All short links created on the website will be publicly accessible. 
 
+### How do we perform the password reset
+
+- when the user wants to reset their password by submitting their email in the forgot password form, we generate a reset primary token for the `password_reset_tokens` table
+- token is 64 bytes long & crypto graphically random
+- we store the hash of the primary token in the table
+- the user is sent the actual token in their reset email
+- user clicks link that is a URL with the token
+- this fetches the forgot password form page from the server
+- server hashes primary token & looks up the record for hash
+  - performs "token from email validation check"
+- server sets `primary_token_used_at`
+- server generates secondary token - 64 bytes long & crypto graphically random
+- server stores hash of the secondary token in the table with the record
+- server embeds secondary token in rendered reset form page
+- client submits form back to same URL with primary token (in URL) & secondary token as a hidden field
+- server performs "form submission validation check"
+- server sets `secondary_token_used_at`
+- server will look up user & update password_hash with new password
+- we have a nightly job that deletes tokens over 3 days old
+
+
+token from email validation check:
+- primary token not in table - reject
+- `created_at` in the future - reject
+- `expires_at` in the past - reject
+- `secondary_token_hash` is not null - reject
+- `primary_token_used_at` is not null - reject
+- `secondary_token_used_at` is not null - reject
+- Allow
+
+form submission validation check:
+- primary token not in table - reject
+- secondary token does not match record - reject
+- `created_at` in the future - reject
+- `expires_at` in the past - reject
+- `secondary_token_hash` is null - reject
+- `primary_token_used_at` is null - reject
+- `secondary_token_used_at` is not null - reject
+- `primary_token_used_at` > 5 mins ago - reject
+- Allow
+
+Rate limiting:
+
+Still not sure on this. We can check any tokens were created for a particular user over time or over a period of time, except if we only use this, this would open us up to enumeration. We don't want to expose which emails are registered with us if possible. 
+
+
 ## URL Plan
 
 URLs expected for each flow
@@ -362,6 +409,24 @@ URLs expected for each flow
   - `GET /dashboard` - show page
 
 ### Forgot Password
+- SignIn Page
+  - `GET /sign-in` - show page
+  - `POST /sign-in` - submit form
+
+- Forgot Password Page
+  - `GET /forgot-password` - show page
+  - `POST /forgot-password` - submit form
+
+- Check Email Reset Link Page
+  - `GET /forgot-password-email` - show page
+
+- New Password Page
+  - `GET /new-password?t={token}` - show page
+  - `POST /new-password` - submit form
+
+- Password Reset Confirmed Page
+  - `GET /password-changed` - show page
+
 ### Create quick link
 ### Create new link
 ### View all links
