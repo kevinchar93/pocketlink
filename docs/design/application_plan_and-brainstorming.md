@@ -126,7 +126,7 @@ When accessing a link created by a user a single action can be done:
 - Upon deletion, the user is taken to the confirmation screen. 
 
 
-# Core business operations / questions
+## Core business operations / questions
 
 The key problems in the application we need to solve are:
 - What validation do we want to perform on URLs that are given to us? 
@@ -149,7 +149,7 @@ The key problems in the application we need to solve are:
 - How do we handle URLs that are already short links from your own service? (prevent loops?)
 - Do you need any concept of "public" vs "private" links?
 
-## What validation do we want to perform on destination URLs that are given to us?
+### What validation do we want to perform on destination URLs that are given to us?
 
 - We should ensure that destination URLs are valid. 
 - We will only support URLs with the HTTPS protocol. 
@@ -193,7 +193,7 @@ Potential issues:
   - We can look to configure rate limiting in any load balancer service that we use with the cloud provider that the application is deployed to. 
 
 
-## How will we actually generate the short link slugs?
+### How will we actually generate the short link slugs?
 
 Thinking
 - We want to generate a slug that is short.
@@ -234,7 +234,7 @@ Possible implementation details:
 - https://redis.io/docs/latest/develop/clients/patterns/bulk-loading/
 - https://packages.adonisjs.com/packages/adonisjs-cache
 
-## How will we redirect quests to their destination? 
+### How will we redirect quests to their destination? 
 
 - Pocket link will be hosted on the domain `pocketlink.co.uk`
 - Short links will have the domain `pok.ad` , example like `pok.ad/sfhSHc9`
@@ -249,7 +249,7 @@ Possible implementation details:
    -  TTL is 5 min so we strike a good balance between performance and today analytics. 
 
 
-## How do we track the analytics for each click?
+### How do we track the analytics for each click?
 
 - We will use a NoSQL database to track link analytics (mongoDB)
 - If we've successfully looked up and returned a response for a short link we will write a document to the collection `link_visit`
@@ -258,12 +258,12 @@ Possible implementation details:
 - we will query this collection to create our analytics visualizations.
 - https://packages.adonisjs.com/packages/adonisjs-jobs
 
-## What counts as a visit for analytics purposes?
+### What counts as a visit for analytics purposes?
 
 - not planning on putting any client side injected code into the redirect
 - a visit will be counted when a request hits the application server
 
-## What exactly do we track in the analytics? 
+### What exactly do we track in the analytics? 
 
 - the link
 - link owner
@@ -274,61 +274,104 @@ Possible implementation details:
 
 see doc: 1767571394_document_db_model_for_storing_events.md
 
-## What happens to analytics data when a link is deleted? 
+### What happens to analytics data when a link is deleted? 
 
 Create a background job to remove the user ID from each analytics entry in the collection. But we still want to keep analytics for links, even if the owner has deleted them for our analytics purposes. 
 
-## How far back does analytics data go? (store forever, or rolling window?)
+### How far back does analytics data go? (store forever, or rolling window?)
 
 Three months of analytics will be kept a background job will run every night that removes analytics older than a given date
 
-## Do we allow users to provide a customized short link alias?
+### Do we allow users to provide a customized short link alias?
 
 No, we don't want to introduce this complexity, That said, the current design would allow for it in the future.
 
-## Do we need any caching and how will we implement this?
+### Do we need any caching and how will we implement this?
 
 -  We will maintain a cache of the URL mappings that we will use when looking up that we need to redirect. 
 -  When sending redirect responses to the client, we will provide a cache control header for the browser to cache the response for five minutes. 
 
-## Do we need or want any rate limiting? 
+### Do we need or want any rate limiting? 
 
 Users are going to be limited to creating 20 links in total. So I don't think we need to rate limit the rate at which they can create links, but we should have the analytics to observe what's being called and when to see if we do need to rate limit any part of the application. 
 
-## How are we going to handle authentication?
+### How are we going to handle authentication?
 
 - There is no concept of private short links. All short links are publicly accessible. 
 -  Users must be logged in to manage short links on the website.
 -  We will authenticate users using server side sessions. 
 
-## What happened when a user edits the destination URL of a link?
+### What happened when a user edits the destination URL of a link?
 
  When writing the new mapping to the database, we replace the existing mapping in the cache.
 
  We update the record associated short_links table 
 
-## What happens when a user deletes a link?
+### What happens when a user deletes a link?
 
 The short link will be soft deleted by setting a time on the deleted_at field.
 
 We will create an hourly cron job that will hard delete the short links and archive the back_half by inserting it into the archived_short_links table, we'll be able to use this table to look up existing slugs when generating slugs for new short links.
 
-## What happens when a user deletes their account?
+### What happens when a user deletes their account?
 
 We will delete all of the links associated with their account. 
 
 We will do this as a batch job instead of doing it upon the user deleting their account (using soft delete).
 
-## What happens when someone tries to visit a deleted/expired short link?
+### What happens when someone tries to visit a deleted/expired short link?
 
 The cache will be checked to see if the mapping does not exist because it 
 
 Note: we will also will use the archived short links table to maintain a list of the links that have been removed. 
 
-## How do we handle URLs that are already short links from your own service? (prevent loops?)
+### How do we handle URLs that are already short links from your own service? (prevent loops?)
 
 We will handle this in the validation step that is run when a user creates new links. We will prevent them from providing destination links that link to a pocket link URL. 
 
-## Do you need any concept of "public" vs "private" links?
+### Do you need any concept of "public" vs "private" links?
 
 No, we will not be offering any facility for creating private links. All short links created on the website will be publicly accessible. 
+
+## URL Plan
+
+URLs expected for each flow
+
+### Landing page, create link and sign up
+- Landing Page
+  - `GET /` - show page
+  - `POST /landing-form` - submit form
+
+- SignUp Page
+  - `GET /sign-up` - show page
+  - `POST /sign-up` - submit form
+
+- Dashboard Page
+  - `GET /dashboard` - show page
+
+- Email verification step
+  - `POST /verify/{token}` - validate account with link from email
+  
+### Sign in
+
+- SignIn Page
+  - `GET /sign-in` - show page
+  - `POST /sign-in` - submit form
+
+- Dashboard Page
+  - `GET /dashboard` - show page
+
+### Forgot Password
+### Create quick link
+### Create new link
+### View all links
+### View link details
+### Edit a link
+### Delete a link
+### View account activity data
+### Export account activity data
+### Change email address
+### Change password
+### Delete account
+
+### List of pages & URLs with their methods
