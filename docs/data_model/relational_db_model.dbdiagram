@@ -7,38 +7,44 @@
     {
       "name": "domains",
       "schemaName": "public",
-      "x": 210.49885895621242,
-      "y": 404.76551570192015
+      "x": 1008,
+      "y": 224
     },
     {
       "name": "users",
       "schemaName": "public",
-      "x": 576,
-      "y": 88
+      "x": 504,
+      "y": 224
     },
     {
       "name": "short_links",
       "schemaName": "public",
-      "x": 40.90804683226657,
-      "y": 62.183906335466816
+      "x": 1191.7057218363234,
+      "y": -162.77584998230714
     },
     {
       "name": "archived_short_links",
       "schemaName": "public",
-      "x": 1092.4804534412274,
-      "y": 87.0628468317924
+      "x": 16,
+      "y": 16
     },
     {
       "name": "password_reset_tokens",
       "schemaName": "public",
-      "x": 942.8597509572288,
-      "y": 491.74482809936
+      "x": 1008,
+      "y": 528
+    },
+    {
+      "name": "user_verification_tokens",
+      "schemaName": "public",
+      "x": 1008,
+      "y": 800
     },
     {
       "name": "auth_types",
       "schemaName": "public",
-      "x": 486.97931239743974,
-      "y": 732.4804534412273
+      "x": 16,
+      "y": 224
     }
   ],
   "tableGroupCollapseStates": [],
@@ -117,6 +123,21 @@
       "secondTableName": "users",
       "secondSchemaName": "public",
       "secondRelation": "*",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "id"
+      ],
+      "firstTableName": "users",
+      "firstSchemaName": "public",
+      "firstRelation": "1",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "user_verification_tokens",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
       "checkPoints": []
     }
   ]
