@@ -21,11 +21,12 @@ Here are the different flows for what a customer can do in the app.
 - Landing page, create link and sign up
 - Sign in
 - Forgot Password
-- Create  quick link
+- Create quick link
 - Create new link
 - View all links
-- View a link's details
-- Edit a link's details
+- View link details
+- Edit a link
+- Delete a link
 - View account activity data
 - Export account activity data
 - Change email address
@@ -75,22 +76,55 @@ When accessing a link created by a user a single action can be done:
 - User is shown, link created successfully, modal upon successful link creation. The model is shown on top of the My Links page, which the user will have been navigated back to. 
 - If user clicks view link details, they are navigated to the link details page.
 
-### View a link's details
+### View link details
 
 - User starts on my links page. They click on a link they wish to view the details for. 
 - They are navigated to the link details page to see details and analytics for the link in question. 
 
-### Edit a link's details
+### Edit a link
 
 - User starts on my links page. They click the edit button on a link they wish to edit. 
 - User is navigated to edit link page where they edit the details of the link in the form and click save or cancel. 
 - User can also access the edit page by clicking edit from the link details page. 
 
+### Delete a link
+
+- The user can start on the My Links page or on the Details page for a specific link. 
+- In the options menu for the link, the user can choose to delete. 
+- They are taken to a page to confirm deletion. 
+- After the link is deleted, they are returned to the MyLinks page. 
+
 ### View account activity data
+
+- User can navigate to this page, main menu. 
+- On the page they can see the usage activity of their account, how many of the links they are allowed to create have already been created. 
+
 ### Export account activity data
+
+- User must be on the activity page. 
+- They can hit a button to export the activity recorded for their account. 
+- This will download a JSON file with all of the activity that has happened on the account. 
+
 ### Change email address
+
+- The user must be on the settings page. In the profile page, they can choose to change their email from the CTA. 
+- The user must first confirm their password. This is a protected area. 
+- The user is shown the change email address form where they can provide and confirm their new email address and submit the form. 
+- A verification email is sent to the user. Clicking this, their new email address will be confirmed and their all email address removed. 
+
 ### Change password
+
+- The user must be on the settings page. In the profile page, they can choose to change their password from the CTA. 
+- The user must first confirm their password. This is a protected area. 
+- The user is shown the change email address form where they can provide and confirm their password and submit the form.
+- The confirmation the user is redirected to the dashboard. 
+
 ### Delete account
+- The user must be on the settings page. In the profile page, they can choose to delete their account from the CTA. 
+- The user must first confirm their password. This is a protected area. 
+- Since this is such a destructive action, the user will be made to type out a string confirming their wish to delete the account before hitting the delete my account button. 
+- Upon deletion, the user is taken to the confirmation screen. 
+
 
 # Core business operations / questions
 
