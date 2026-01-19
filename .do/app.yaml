@@ -1,0 +1,13 @@
+name: pocketlink-holding-page
+static_sites:
+  - name: holding-page
+    github:
+      repo: kevinchar93/pocketlink
+      branch: main
+    source_dir: /holding_page
+    output_dir: /
+    routes:
+      - path: /
+domains:
+  - domain: pocketlink.co.uk
+    type: PRIMARY
