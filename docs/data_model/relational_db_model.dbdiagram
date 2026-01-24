@@ -8,7 +8,7 @@
       "name": "domains",
       "schemaName": "public",
       "x": -175.141322018116,
-      "y": 94.16199642694323
+      "y": 87.91548012507315
     },
     {
       "name": "users",
@@ -38,7 +38,7 @@
       "name": "email_change_tokens",
       "schemaName": "public",
       "x": -259.3349622889554,
-      "y": 430.5068155429583
+      "y": 433.56956025337274
     },
     {
       "name": "user_verification_tokens",
@@ -51,6 +51,24 @@
       "schemaName": "public",
       "x": 304,
       "y": 922.0070433229102
+    },
+    {
+      "name": "audit_event_types",
+      "schemaName": "public",
+      "x": -175.141322018116,
+      "y": 1070.0379953837585
+    },
+    {
+      "name": "audit_events",
+      "schemaName": "public",
+      "x": -195.7446302577054,
+      "y": 830.3779510434309
+    },
+    {
+      "name": "link_visits",
+      "schemaName": "public",
+      "x": -168.4052747889554,
+      "y": -242.0468307411729
     }
   ],
   "tableGroupCollapseStates": [],
@@ -157,6 +175,51 @@
         "id"
       ],
       "secondTableName": "domains",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "audit_events",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "audit_event_type_id"
+      ],
+      "firstTableName": "audit_events",
+      "firstSchemaName": "public",
+      "firstRelation": "1",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "audit_event_types",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "short_link_id"
+      ],
+      "firstTableName": "link_visits",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "short_links",
       "secondSchemaName": "public",
       "secondRelation": "1",
       "checkPoints": []
