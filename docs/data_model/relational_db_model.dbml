@@ -3,13 +3,16 @@ Project project_name {
   Note: 'Pocketlink.co.uk'
 }
 
-Ref "can own": public.users.id < public.domains.user_id [delete: restrict] // A user can own multiple domains, restrict deletion of user if they owen domains - need a feature to delete domains first
-Ref "owns": public.users.id < public.short_links.user_id [delete: cascade] // A user can own multiple short_links, delete user owned short_links on user deletion
-Ref "has a": public.domains.id < public.short_links.domain_id [delete: restrict] // A domain can have multiple short_links, restrict domain deletion if short_links exist
-Ref "can have a" : public.users.id < public.password_reset_tokens.user_id [delete: cascade] // A user can have multiple password reset token (not at same time), delete token on user deletion
-Ref "login via": public.auth_types.id < public.users.auth_type_id [delete: restrict] // An auth_type can be used by multiple users, restrict auth_type deletion if users that use it exist
-Ref "can have a" : public.users.id - public.user_verification_tokens.id [delete: cascade] // A user can have one verification token, delete token on user deletion
-Ref "can have a" : public.users.id < public.email_change_tokens.user_id [delete: cascade] // A user can have multiple email changes token (not at same time), delete token on user deletion
+// authentication and password / email reset
+Ref auth_method_used: users.auth_type_id - auth_types.id [delete: restrict]
+Ref token_owner: password_reset_tokens.user_id > users.id [delete: cascade]
+Ref token_owner: email_change_tokens.user_id > users.id [delete: cascade]
+Ref token_owner: user_verification_tokens.user_id > users.id [delete: cascade]
+
+// domains & short links
+Ref domain_owner: domains.user_id > users.id [delete: restrict]
+Ref short_link_owner: short_links.user_id > users.id [delete: restrict]
+Ref short_link_domain: short_links.domain_id - domains.id [delete: restrict]
 
 Table domains {
   id bigint [pk, unique, not null, increment]
@@ -57,14 +60,20 @@ Table short_links {
 }
 
 Table archived_short_links {
-  back_half varchar [pk, unique, not null]
+  back_half varchar [not null]
+  domain_name varchar [not null]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
+
+  indexes {
+    (domain_name, back_half) [pk, unique]
+  }
+
 }
 
 Table password_reset_tokens {
   id bigint [pk, unique, not null, increment]
-  user_id bigint [not null, unique]
+  user_id bigint [not null]
   primary_token_hash varchar [not null, unique]
   secondary_token_hash varchar [null]
   primary_token_used_at timestamptz [null]
@@ -77,7 +86,7 @@ Table password_reset_tokens {
 // TODO: proof read how this will work
 Table email_change_tokens {
   id bigint [pk, unique, not null, increment]
-  user_id bigint [not null, unique]
+  user_id bigint [not null]
   new_email varchar [not null]
   authorisation_token_hash varchar [not null, unique]
   verification_token_hash varchar [null]
@@ -89,7 +98,7 @@ Table email_change_tokens {
 
 Table user_verification_tokens {
   id bigint [pk, unique, not null, increment]
-  user_id bigint [not null, unique]
+  user_id bigint [not null]
   token_hash varchar [not null, unique]
   created_at timestamptz [not null]
   expires_at timestamptz [not null]
@@ -103,3 +112,31 @@ Table auth_types {
   deleted_at timestamptz [null]
 }
 
+// Table audit_events {
+  // id bigint [pk, unique, not null, increment]
+  // user_id bigint [not null]
+  // audit_event_type_id bigint [not null]
+  // body jsonb [not null]
+  // created_at timestamptz [not null]
+// }
+
+//
+// Table audit_event_types {
+  // id bigint [pk, unique, not null, increment]
+  // name varchar [not null, unique]
+  // created_at timestamptz [not null]
+  // updated_at timestamptz [not null]
+  // deleted_at timestamptz [null]
+// }
+
+//
+// Table link_visits {
+  // id bigint [pk, unique, not null, increment]
+  // short_link_id bigint [not null]
+  // user_agent varchar [null]
+  // location_country varchar [null]
+  // location_region varchar [null]
+  // location_city varchar [null]
+  // referrer varchar [null]
+  // created_at timestamptz [not null]
+// }

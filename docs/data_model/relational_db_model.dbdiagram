@@ -7,50 +7,50 @@
     {
       "name": "domains",
       "schemaName": "public",
-      "x": 1008,
-      "y": 224
+      "x": -175.141322018116,
+      "y": 94.16199642694323
     },
     {
       "name": "users",
       "schemaName": "public",
-      "x": 504,
-      "y": 224
+      "x": 304,
+      "y": 456
     },
     {
       "name": "short_links",
       "schemaName": "public",
-      "x": 1191.7057218363234,
-      "y": -162.77584998230714
+      "x": 304,
+      "y": 23.915480125073145
     },
     {
       "name": "archived_short_links",
       "schemaName": "public",
-      "x": 16,
-      "y": 16
+      "x": 805.7200179218016,
+      "y": 27.975077957354813
     },
     {
       "name": "password_reset_tokens",
       "schemaName": "public",
-      "x": 1008,
-      "y": 528
+      "x": 808.0845198749266,
+      "y": 430.5068155429583
     },
     {
       "name": "email_change_tokens",
       "schemaName": "public",
-      "x": 16,
-      "y": 1094.945623141204
+      "x": -259.3349622889554,
+      "y": 430.5068155429583
     },
     {
       "name": "user_verification_tokens",
       "schemaName": "public",
-      "x": 1008,
-      "y": 852.9456231412039
+      "x": 808.0845198749266,
+      "y": 787.5351406879018
     },
     {
       "name": "auth_types",
       "schemaName": "public",
-      "x": 16,
-      "y": 224
+      "x": 304,
+      "y": 922.0070433229102
     }
   ],
   "tableGroupCollapseStates": [],
@@ -58,107 +58,107 @@
   "referencePaths": [
     {
       "firstFieldNames": [
-        "id"
-      ],
-      "firstTableName": "users",
-      "firstSchemaName": "public",
-      "firstRelation": "1",
-      "secondFieldNames": [
-        "user_id"
-      ],
-      "secondTableName": "domains",
-      "secondSchemaName": "public",
-      "secondRelation": "*",
-      "checkPoints": []
-    },
-    {
-      "firstFieldNames": [
-        "id"
-      ],
-      "firstTableName": "users",
-      "firstSchemaName": "public",
-      "firstRelation": "1",
-      "secondFieldNames": [
-        "user_id"
-      ],
-      "secondTableName": "short_links",
-      "secondSchemaName": "public",
-      "secondRelation": "*",
-      "checkPoints": []
-    },
-    {
-      "firstFieldNames": [
-        "id"
-      ],
-      "firstTableName": "domains",
-      "firstSchemaName": "public",
-      "firstRelation": "1",
-      "secondFieldNames": [
-        "domain_id"
-      ],
-      "secondTableName": "short_links",
-      "secondSchemaName": "public",
-      "secondRelation": "*",
-      "checkPoints": []
-    },
-    {
-      "firstFieldNames": [
-        "id"
-      ],
-      "firstTableName": "users",
-      "firstSchemaName": "public",
-      "firstRelation": "1",
-      "secondFieldNames": [
-        "user_id"
-      ],
-      "secondTableName": "password_reset_tokens",
-      "secondSchemaName": "public",
-      "secondRelation": "*",
-      "checkPoints": []
-    },
-    {
-      "firstFieldNames": [
-        "id"
-      ],
-      "firstTableName": "auth_types",
-      "firstSchemaName": "public",
-      "firstRelation": "1",
-      "secondFieldNames": [
         "auth_type_id"
       ],
-      "secondTableName": "users",
-      "secondSchemaName": "public",
-      "secondRelation": "*",
-      "checkPoints": []
-    },
-    {
-      "firstFieldNames": [
-        "id"
-      ],
       "firstTableName": "users",
       "firstSchemaName": "public",
       "firstRelation": "1",
       "secondFieldNames": [
         "id"
       ],
-      "secondTableName": "user_verification_tokens",
+      "secondTableName": "auth_types",
       "secondSchemaName": "public",
       "secondRelation": "1",
       "checkPoints": []
     },
     {
       "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "password_reset_tokens",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
         "id"
       ],
-      "firstTableName": "users",
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "email_change_tokens",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "user_verification_tokens",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "domains",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "short_links",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "domain_id"
+      ],
+      "firstTableName": "short_links",
       "firstSchemaName": "public",
       "firstRelation": "1",
       "secondFieldNames": [
-        "user_id"
+        "id"
       ],
-      "secondTableName": "email_change_tokens",
+      "secondTableName": "domains",
       "secondSchemaName": "public",
-      "secondRelation": "*",
+      "secondRelation": "1",
       "checkPoints": []
     }
   ]
