@@ -10,29 +10,12 @@ Ref token_owner: email_change_tokens.user_id > users.id [delete: cascade]
 Ref token_owner: user_verification_tokens.user_id > users.id [delete: cascade]
 
 // domains & short links
-Ref domain_owner: domains.user_id > users.id [delete: restrict]
 Ref short_link_owner: short_links.user_id > users.id [delete: restrict]
-Ref short_link_domain: short_links.domain_id - domains.id [delete: restrict]
 
 // audit events & link visits
 Ref audit_event_owner: audit_events.user_id > users.id [delete: set null]
 Ref type_of_audit_event: audit_events.audit_event_type_id - audit_event_types.id [delete: restrict]
 Ref visits_for_short_link: link_visits.short_link_id > short_links.id [delete: set null]
-
-Table domains {
-  id bigint [pk, unique, not null, increment]
-  user_id bigint [null]
-  name varchar [unique, not null]
-  is_default boolean [not null]
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
-  deleted_at timestamptz [null]
-
-  indexes {
-    (user_id, is_default) [unique, note: 'Where is_default = true']
-  }
-
-}
 
 Table users {
   id bigint [pk, unique, not null, increment]
@@ -50,30 +33,18 @@ Table users {
 Table short_links {
   id bigint [pk, unique, not null, increment]
   user_id bigint [not null]
-  domain_id bigint [not null]
   title varchar [null]
   destination_url varchar [not null]
-  back_half varchar [not null]
+  back_half varchar [unique, not null]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz [null]
-
-  indexes {
-    (domain_id, back_half) [unique]
-  }
-
 }
 
 Table archived_short_links {
-  back_half varchar [not null]
-  domain_name varchar [not null]
+  back_half varchar [pk, unique, not null]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
-
-  indexes {
-    (domain_name, back_half) [pk, unique]
-  }
-
 }
 
 Table password_reset_tokens {

@@ -5,12 +5,6 @@
   "detailLevel": "All",
   "tablePositions": [
     {
-      "name": "domains",
-      "schemaName": "public",
-      "x": -175.141322018116,
-      "y": 87.91548012507315
-    },
-    {
       "name": "users",
       "schemaName": "public",
       "x": 304,
@@ -138,21 +132,6 @@
       "firstFieldNames": [
         "user_id"
       ],
-      "firstTableName": "domains",
-      "firstSchemaName": "public",
-      "firstRelation": "*",
-      "secondFieldNames": [
-        "id"
-      ],
-      "secondTableName": "users",
-      "secondSchemaName": "public",
-      "secondRelation": "1",
-      "checkPoints": []
-    },
-    {
-      "firstFieldNames": [
-        "user_id"
-      ],
       "firstTableName": "short_links",
       "firstSchemaName": "public",
       "firstRelation": "*",
@@ -160,21 +139,6 @@
         "id"
       ],
       "secondTableName": "users",
-      "secondSchemaName": "public",
-      "secondRelation": "1",
-      "checkPoints": []
-    },
-    {
-      "firstFieldNames": [
-        "domain_id"
-      ],
-      "firstTableName": "short_links",
-      "firstSchemaName": "public",
-      "firstRelation": "1",
-      "secondFieldNames": [
-        "id"
-      ],
-      "secondTableName": "domains",
       "secondSchemaName": "public",
       "secondRelation": "1",
       "checkPoints": []
