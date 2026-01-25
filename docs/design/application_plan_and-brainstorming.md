@@ -778,3 +778,45 @@ Collection: link_visit
   }
 }
 ```
+
+
+## Data deletion policy
+
+This is to handle what we do at data when users delete their accounts. 
+
+Suggested deletion policy. 
+- Soft delete the user immediately, so they cannot log in. 
+    - Anonymized email address associated with the account. 
+- Delete all tokens associated with the user. 
+- Soft delete all of the user's shortlinks. 
+- archive the back halves of the user's existing short links to prevent them being reused. 
+- Either delete all visit data associated with the user's links or anonymize the visit data. 
+- Remove users information from audit events by setting user ID to null. 
+- schedule hard deletion for a maximum of 30 days later where all data associated with the user is removed from the tables. 
+
+
+Policy
+```
+## Account Deletion Policy
+
+When you delete your account:
+
+1. **Immediate effect:**
+   - You can no longer log in
+   - Your email address is removed from our system
+   - Your short links stop working immediately
+
+2. **30-day grace period:**
+   - Your account can be restored if you contact support
+   - Your data is marked for deletion but not yet removed
+
+3. **After 30 days (permanent deletion):**
+   - Your account is permanently deleted
+   - All your short links are permanently deleted
+   - All analytics data for your links is permanently deleted
+   - Some anonymized audit logs are retained for security purposes
+
+4. **What happens to links you shared:**
+   - Anyone who has your short links will receive a "404 Not Found" error
+   - We recommend updating any published links before deleting your account
+```

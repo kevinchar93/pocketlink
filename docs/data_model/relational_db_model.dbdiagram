@@ -61,8 +61,20 @@
     {
       "name": "link_visits",
       "schemaName": "public",
-      "x": -168.4052747889554,
-      "y": -242.0468307411729
+      "x": -171.86125013311025,
+      "y": -8.084519874926855
+    },
+    {
+      "name": "link_visits_days",
+      "schemaName": "public",
+      "x": -243.23380872686025,
+      "y": -418.4413562047002
+    },
+    {
+      "name": "link_visits_months",
+      "schemaName": "public",
+      "x": -239.7778333827054,
+      "y": -856.6916801399211
     }
   ],
   "tableGroupCollapseStates": [],
@@ -178,6 +190,36 @@
         "short_link_id"
       ],
       "firstTableName": "link_visits",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "short_links",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "short_link_id"
+      ],
+      "firstTableName": "link_visits_days",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "short_links",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "short_link_id"
+      ],
+      "firstTableName": "link_visits_months",
       "firstSchemaName": "public",
       "firstRelation": "*",
       "secondFieldNames": [

@@ -10,15 +10,19 @@ Ref token_owner: email_change_tokens.user_id > users.id [delete: cascade]
 Ref token_owner: user_verification_tokens.user_id > users.id [delete: cascade]
 
 // domains & short links
-Ref short_link_owner: short_links.user_id > users.id [delete: restrict]
+Ref short_link_owner: short_links.user_id > users.id
 
 // audit events & link visits
-Ref audit_event_owner: audit_events.user_id > users.id [delete: set null]
-Ref type_of_audit_event: audit_events.audit_event_type_id - audit_event_types.id [delete: restrict]
-Ref visits_for_short_link: link_visits.short_link_id > short_links.id [delete: set null]
+Ref audit_event_owner: audit_events.user_id > users.id
+Ref type_of_audit_event: audit_events.audit_event_type_id - audit_event_types.id
+Ref visits_for_short_link: link_visits.short_link_id > short_links.id
+Ref daily_visits_for_short_link: link_visits_days.short_link_id > short_links.id
+Ref montly_visits_for_short_link: link_visits_months.short_link_id > short_links.id
+
+// TODO: Add referential actions when data deletion policy is clear.
 
 Table users {
-  id bigint [pk, unique, not null, increment]
+  id bigint [pk, increment]
   auth_type_id bigint [not null]
   email varchar [unique, not null]
   max_allowed_links integer [not null]
@@ -31,24 +35,25 @@ Table users {
 }
 
 Table short_links {
-  id bigint [pk, unique, not null, increment]
+  id bigint [pk, increment]
   user_id bigint [not null]
   title varchar [null]
-  destination_url varchar [not null]
-  back_half varchar [unique, not null]
+  destination_url varchar [not null, note: "'CHECK: length <= 2048'"]
+  back_half varchar [unique, not null, note: "'CHECK: alphanumeric and betweens 4 and 12 characters"]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz [null]
 }
 
 Table archived_short_links {
-  back_half varchar [pk, unique, not null]
+  back_half varchar [pk]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
+  Note: 'Prevents reuse of deleted short link slugs to avoid confusion/security issues'
 }
 
 Table password_reset_tokens {
-  id bigint [pk, unique, not null, increment]
+  id bigint [pk, increment]
   user_id bigint [not null]
   primary_token_hash varchar [not null, unique]
   secondary_token_hash varchar [null, unique]
@@ -59,7 +64,7 @@ Table password_reset_tokens {
 }
 
 Table email_change_tokens {
-  id bigint [pk, unique, not null, increment]
+  id bigint [pk, increment]
   user_id bigint [not null]
   new_email varchar [not null]
   authorisation_token_hash varchar [not null, unique]
@@ -71,7 +76,7 @@ Table email_change_tokens {
 }
 
 Table user_verification_tokens {
-  id bigint [pk, unique, not null, increment]
+  id bigint [pk, increment]
   user_id bigint [not null]
   token_hash varchar [not null, unique]
   created_at timestamptz [not null]
@@ -79,7 +84,7 @@ Table user_verification_tokens {
 }
 
 Table auth_types {
-  id bigint [pk, unique, not null, increment]
+  id bigint [pk, increment]
   name varchar [not null, unique]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
@@ -87,7 +92,7 @@ Table auth_types {
 }
 
 Table audit_event_types {
-  id bigint [pk, unique, not null, increment]
+  id bigint [pk, increment]
   name varchar [not null, unique]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
@@ -95,7 +100,7 @@ Table audit_event_types {
 }
 
 Table audit_events {
-  id bigint [pk, unique, not null, increment]
+  id bigint [pk, increment]
   user_id bigint [null]
   audit_event_type_id bigint [not null]
   body jsonb [not null]
@@ -103,12 +108,47 @@ Table audit_events {
 }
 
 Table link_visits {
-  id bigint [pk, unique, not null, increment]
+  id bigint [pk, increment]
   short_link_id bigint [not null]
   user_agent varchar [null]
+  ip_hash varchar [null]
+  ip_hash_date date [null]
   location_country varchar [null]
-  location_region varchar [null]
   location_city varchar [null]
   referrer varchar [null]
   created_at timestamptz [not null]
+}
+
+Table link_visits_days {
+  short_link_id bigint [not null]
+  visits_date date [not null]
+  visit_count bigint [not null]
+  unique_visit_count bigint [not null]
+  aggregate_country_visits jsonb [null]
+  aggregate_city_in_country_visits jsonb [null]
+  aggregate_referrer_visits jsonb [null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (short_link_id, visits_date) [pk]
+  }
+
+}
+
+Table link_visits_months {
+  short_link_id bigint [not null]
+  month_start date [not null]
+  visit_count bigint [not null]
+  unique_visit_count bigint [not null]
+  aggregate_country_visits jsonb [null]
+  aggregate_city_in_country_visits jsonb [null]
+  aggregate_referrer_visits jsonb [null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (short_link_id, month_start) [pk]
+  }
+
 }
