@@ -80,21 +80,19 @@ Table password_reset_tokens {
   id bigint [pk, unique, not null, increment]
   user_id bigint [not null]
   primary_token_hash varchar [not null, unique]
-  secondary_token_hash varchar [null]
+  secondary_token_hash varchar [null, unique]
   primary_token_used_at timestamptz [null]
   secondary_token_used_at timestamptz [null]
   created_at timestamptz [not null]
   expires_at timestamptz [not null]
 }
 
-
-// TODO: proof read how this will work
 Table email_change_tokens {
   id bigint [pk, unique, not null, increment]
   user_id bigint [not null]
   new_email varchar [not null]
   authorisation_token_hash varchar [not null, unique]
-  verification_token_hash varchar [null]
+  verification_token_hash varchar [null, unique]
   authorisation_token_used_at timestamptz [null]
   verification_token_used_at timestamptz [null]
   created_at timestamptz [not null]

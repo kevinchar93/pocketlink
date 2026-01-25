@@ -251,15 +251,19 @@ Possible implementation details:
 
 ### How do we track the analytics for each click?
 
-- We will use a NoSQL database to track link analytics (mongoDB)
-- If we've successfully looked up and returned a response for a short link we will create an async job to write a document to the collection `link_visit`
-  - to be able to look up the location from the ip using a web service we will write the data to a queue to be written to the collection - this is so we don't delay the response waiting for an ip address lookup
-  - we will use the free downloadable geo ip database provided by max mind to look up location data from ip addresses
+- we will use the tables, `link_visits`, `link_visits_daily` & `link_visits_monthly` to track analytics for each click
+    - `link_visits` - will store individual visit data for the last 7 days
+    - `link_visits_daily` - will store aggregated visit data for each day, for the last 30 days
+    - `link_visits_monthly` - will store aggregated visit data for each month, for the last 24 months
+- if we've successfully looked up and returned a response for a short link we will create an async job to write a record to the `link_visits` table
+    - https://packages.adonisjs.com/packages/adonisjs-jobs
+ - we will use the free downloadable geo ip database provided by max mind to look up location data from ip addresses
     - https://dev.maxmind.com/geoip/geolite2-free-geolocation-data/
     - (https://www.maxmind.com/en/geoip-api-web-services#buy-now)
-  - upon writing the data to the collection the ip address is hashed with a time based salt (changes every 12 hours)
-- we will query this collection to create our analytics visualizations.
-- https://packages.adonisjs.com/packages/adonisjs-jobs
+- upon writing the data to the collection the ip address is hashed with a time based salt (changes every 24 hours)
+- for the referrer we will only keep the referring domain name
+- we will query these tables to create our analytics visualizations
+
 
 ### What counts as a visit for analytics purposes?
 
@@ -273,7 +277,7 @@ Possible implementation details:
 - time of the event
 - ip address (hashed with time based salt)
 - user agent
-- referrer
+- referrer (domain name only)
 
 see doc: 1767571394_document_db_model_for_storing_events.md
 
@@ -348,26 +352,30 @@ No, we will not be offering any facility for creating private links. All short l
 
 ### How do we perform the password reset
 
-- when the user wants to reset their password by submitting their email in the forgot password form, we generate a reset primary token for the `password_reset_tokens` table
+- when the user wants to reset their password by submitting their email in the forgot password form
+- perform **password_reset_rate_limit_check**
+- mark any existing password reset tokens in the table as expired
+    - set expiry date date to beginning of unix epoch
+- we then generate a reset primary token for the `password_reset_tokens` table
 - token is 64 bytes long & cryptographically random
 - we store the hash of the primary token in the table
 - the user is sent the actual token in their reset email
 - user clicks link that is a URL with the token
 - this fetches the forgot password form page from the server
 - server hashes primary token & looks up the record for hash
-  - performs "token from email validation check"
+  - perform **token_from_email_validation_check**
 - server sets `primary_token_used_at`
 - server generates secondary token - 64 bytes long & cryptographically random
 - server stores hash of the secondary token in the table with the record
 - server embeds secondary token in rendered reset form page
 - client submits form back to same URL with primary token (in URL) & secondary token as a hidden field
-- server performs "form submission validation check"
+- perform **form_submission_validation_check**
 - server sets `secondary_token_used_at`
 - server will look up user & update password_hash with new password
 - we have a nightly job that deletes tokens over 3 days old
 
 
-token from email validation check:
+**token_from_email_validation_check**:
 - primary token not in table - reject
 - `created_at` in the future - reject
 - `expires_at` in the past - reject
@@ -376,9 +384,8 @@ token from email validation check:
 - `secondary_token_used_at` is not null - reject
 - Allow
 
-form submission validation check:
-- primary token not in table - reject
-- secondary token does not match record - reject
+**form_submission_validation_check**:
+- secondary token not in table - reject
 - `created_at` in the future - reject
 - `expires_at` in the past - reject
 - `secondary_token_hash` is null - reject
@@ -387,47 +394,72 @@ form submission validation check:
 - `primary_token_used_at` > 5 mins ago - reject
 - Allow
 
-Rate limiting:
-
-Still not sure on this. We can check any tokens were created for a particular user over time or over a period of time, except if we only use this, this would open us up to enumeration. We don't want to expose which emails are registered with us if possible. 
+**password_reset_rate_limit_check**:
+- per account: max 3 requests per hour per user, max 6 in any 24 hour period
+- per ip address: max 5 requests per min
+    - after 3 requests from same ip in 1 min, redirect to captcha
+    - exponential back off from 1 min to 3 hours after 3rd request
 
 
 ### How do we perform email change
 
-TODO: flesh this out
-
-- the user triggers the email change by first completing a password challenge
-- Then fill in the change email address form and submit it. 
-- The server creates an authorization token for the `email_change_tokens` table
-- token is 64 bytes long & cryptographically random
-- we store the hash of the auth token in the table in `authorisation_token_hash`
-- new email is stored in `new_email`
-- the user is sent the actual token in their auth email
-- From the email, the user can choose to accept or cancel the change. 
-  - cancelling the change deletes the record from the table by opening url with the token
-  - "cancel change validation check" is done before accepting cancellation
-- If the user chooses to accept, they click a link that opens the URL with the token.
-- this fetches the "Verification Email Sent"  page from the server
-- server will perform "accept authorisation validation check"
-- if request valid continue
-- `authorisation_token_used_at` is set
+- user triggers the email change by first completing a password challenge
+    - this "elevates" their session for 10 mins
+- users fills in the change email address form and submits it
+- server creates authorization token for the `email_change_tokens` table
+    - token is 64 bytes long & cryptographically random
+- server stores hash of the auth token in the table in `authorisation_token_hash`
+- new email stored in `new_email`
+- user is sent the actual token in their authorisation email
+- a job to send an authorisation email is scheduled
+- from the email, the user is presented with a link to cancel or or accept the change
+- link takes them to a page with those options (cancel / accept)
+- perform **change_email_auth_token_check**
+    - cancelling will delete the record with the token from the table
+- `authorisation_token_used_at` is set in the record in the DB
+- if user chooses to accept, they are redirected to the "Verification Email Sent" page
 - a job to send a verification email is scheduled
-- user will receive verification email at new address - user can accept of cancel change
-  - cancelling the change deletes the record from the table by opening url with the token
-  - "cancel change validation check" is done before accepting cancellation
-- If the user chooses to accept, they click a link that opens the URL with the token, user clicks link that is a URL with the token
-- this fetches "Email changed" page from the server
-- server will perform "accept verification validation check"
-- if request valid continue
-- `verification_token_used_at` is set
+    - in the job verification token is generated & hash stored in associated DB record
+- user will receive verification email with actual token at new email address - user is presented with a link that tells them they can cancel or or accept the change
+- that link takes them to a page with those options (cancel / accept)
+- perform **change_email_verification_token_check**
+    - cancelling will delete the record of with token from the table
+- `verification_token_used_at` is set in the record in the DB
+- If the user chooses to accept
 - we replace the users email in the users table with `new_email`
+- they are redirected to "Email changed" paged 
+
+- **change_email_auth_token_check**
+- auth token not in table - reject
+- user not logged in with valid session - reject
+- token does not belong to user's session - reject
+- user is not elevated - reject
+- `created_at` in the future - reject
+- `expires_at` in the past - reject
+- `authorisation_token_used_at` not null - reject
+- `verification_token_hash` not null - reject
+- `verification_token_used_at` not null - reject
+- Allow
+
+- **change_email_verification_token_check**
+- verification token not in table - reject
+- user not logged in with valid session - reject
+- token does not belong to user's session - reject
+- user is not elevated - reject
+- `created_at` in the future - reject
+- `expires_at` in the past - reject
+- `authorisation_token_used_at` is null - reject
+- `authorisation_token_used_at` > 1hr ago - reject
+- `verification_token_used_at` not null - reject
+- Allow
 
 
-cancel change validation check:
+email changes rate limit check:
+- per account: max 3 requests per hour per user, max 6 in any 24 hour period
+- per ip address: max 5 requests per min
+    - after 3 requests from same ip in 1 min, redirect to captcha
+    - exponential back off from 1 min to 3 hours after 3rd request
 
-accept authorisation validation check:
-
-accept verification check:
 
 ## URL Plan
 
@@ -689,3 +721,60 @@ OR
 - [x] `GET /delete-account` - Show delete account confirmation form
 - [x] `POST /delete-account` - Submit delete account form
 - [x] `GET /account-deleted` - Show account deleted confirmation
+
+
+## Table Redesign
+
+The original plan to track events and clicks was to use a MongoDB database, In deployment I would have used a managed service to run this
+
+I'm already using a managed database service for the relational DB. I don't want to pay extra for another managed service, Nor do I want to run this service within the VM that will host my application - Don't want to have to be responsible for backups.
+
+Since the application will have a limited amount of traffic, I will actually create two new database tables for writing audit events and clicks. 
+
+- `audit_events` table
+- `clicks` table
+
+This was the original schema slash plan for the document DB collections. I'll create a table that's similar in structure
+
+
+Collection: audit_event
+
+```json
+{
+  "_id": "When the actual P address or analytics is being displayed. ",
+  "timestamp": "2025-11-15T21:46:53Z",
+  "event": "LINK_CREATED",
+  "user": {
+    "id": 123, // ID of event *owner* from SQL "user" table
+    "is_verified": true
+  },
+  "target": {
+    "type": "shortlink", // type will determine body
+    "id": 456,
+    "body": {
+      // any structure, for link creation could be below but could also be any other shape
+      "destination": "xxxxx",
+      "short": "xxxx"
+    }
+  },
+  "detail": "User created a new link for https://..."
+}
+```
+
+Collection: link_visit
+
+```json
+{
+  "_id": "f83ad712c12c4925b2d32aa524ea536c",
+  "timestamp": "2025-11-15T21:50:00Z",
+  "link_id": 456, // ID from SQL "shortlink" table
+  "user_id": 123, // ID of *owner* from SQL "user" table
+  "ip_hash": "a_hashed_ip_address_for_privacy",
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; ...)",
+  "referrer": "https://t.co/",
+  "location": {
+    "country": "GB",
+    "city": "London"
+  }
+}
+```
